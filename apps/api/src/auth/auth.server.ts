@@ -519,13 +519,12 @@ export const auth = betterAuth({
     magicLink({
       expiresIn: MAGIC_LINK_EXPIRES_IN_SECONDS,
       sendMagicLink: async ({ email, url }) => {
-        // The `url` from better-auth points to the API's verify endpoint
-        // and includes the callbackURL from the client's sign-in request.
-        // Flow: user clicks link → API verifies token & sets session cookie
-        // → API redirects (302) to callbackURL (the app).
         if (process.env.NODE_ENV === 'development') {
-          console.log('[Auth] Sending magic link to:', email);
           console.log('[Auth] Magic link URL:', url);
+        }
+        if (!process.env.RESEND_API_KEY || process.env.RESEND_API_KEY === 'placeholder') {
+          console.log('[Auth] RESEND_API_KEY not set — magic link email not sent for', email);
+          return;
         }
         await triggerEmail({
           to: email,
@@ -539,7 +538,11 @@ export const auth = betterAuth({
       expiresIn: 10 * 60,
       async sendVerificationOTP({ email, otp }) {
         if (process.env.NODE_ENV === 'development') {
-          console.log('[Auth] Sending OTP to:', email);
+          console.log('[Auth] OTP for', email, ':', otp);
+        }
+        if (!process.env.RESEND_API_KEY || process.env.RESEND_API_KEY === 'placeholder') {
+          console.log('[Auth] RESEND_API_KEY not set — OTP email not sent for', email);
+          return;
         }
         await triggerEmail({
           to: email,

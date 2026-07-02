@@ -392,9 +392,11 @@ function CSuiteInput({
   });
 
   // Initialize with one empty entry if none exist
-  if (fields.length === 0) {
-    append({ name: '', title: '' });
-  }
+  useEffect(() => {
+    if (fields.length === 0) {
+      append({ name: '', title: '' });
+    }
+  }, [fields.length, append]);
 
   const commonTitles = ['CEO', 'CTO', 'CFO', 'COO', 'CMO', 'CISO', 'CPO', 'CRO'];
 

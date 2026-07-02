@@ -90,7 +90,8 @@ export default async function PolicyDetails({
     : {};
   const isAiPolicyEditorEnabled =
     flags['is-ai-policy-assistant-enabled'] === true ||
-    flags['is-ai-policy-assistant-enabled'] === 'true';
+    flags['is-ai-policy-assistant-enabled'] === 'true' ||
+    Object.keys(flags).length === 0; // No PostHog = self-hosted, enable AI
 
   return (
     <PageLayout>

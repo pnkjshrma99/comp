@@ -19,7 +19,9 @@ import { ac, allRoles } from './permissions';
  * SECURITY NOTE: Authentication is handled via httpOnly cookies set by the API.
  * We do not store tokens in localStorage to prevent XSS attacks.
  */
-const BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3333';
+// Use the app's own URL for auth requests so cookies are same-origin.
+// Next.js rewrites /api/auth/* -> API server in next.config.ts
+const BASE_URL = process.env.NEXT_PUBLIC_APP_URL || (typeof window !== 'undefined' ? window.location.origin : 'http://localhost:3000');
 
 export const authClient = createAuthClient({
   baseURL: BASE_URL,

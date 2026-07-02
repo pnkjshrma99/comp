@@ -108,7 +108,12 @@ const config: NextConfig = {
 
   // PostHog proxy for better tracking
   async rewrites() {
+    const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3333';
     return [
+      {
+        source: '/api/auth/:path*',
+        destination: `${apiUrl}/api/auth/:path*`,
+      },
       {
         source: '/ingest/static/:path*',
         destination: 'https://us-assets.i.posthog.com/static/:path*',

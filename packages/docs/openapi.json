@@ -24281,14 +24281,6 @@
             }
           },
           {
-            "name": "frameworkInstanceId",
-            "required": true,
-            "in": "query",
-            "schema": {
-              "type": "string"
-            }
-          },
-          {
             "name": "formType",
             "required": true,
             "in": "path",
@@ -24309,6 +24301,14 @@
                 "tabletop_exercise",
                 "account_types"
               ],
+              "type": "string"
+            }
+          },
+          {
+            "name": "frameworkInstanceId",
+            "required": true,
+            "in": "query",
+            "schema": {
               "type": "string"
             }
           }

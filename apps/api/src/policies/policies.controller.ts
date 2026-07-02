@@ -33,8 +33,7 @@ import {
   ApiExtraModels,
 } from '@nestjs/swagger';
 import type { Response } from 'express';
-import { openai } from '@ai-sdk/openai';
-import { streamText, convertToModelMessages, type UIMessage } from 'ai';
+import { type UIMessage } from 'ai';
 import { db } from '@db';
 import { auth as triggerAuth, tasks } from '@trigger.dev/sdk';
 import type { updatePolicy } from '../trigger/policies/update-policy';
@@ -1502,7 +1501,7 @@ export class PoliciesController {
     @Body() body: AISuggestPolicyRequestDto,
     @Res() res: Response,
   ) {
-    if (!process.env.OPENAI_API_KEY) {
+    if (!process.env.OPENAI_API_KEY && !process.env.GROQ_API_KEY) {
       throw new HttpException(
         'AI service not configured',
         HttpStatus.SERVICE_UNAVAILABLE,
@@ -1540,28 +1539,89 @@ IMPORTANT: When providing updated policy content, you MUST include the ENTIRE po
 
 Keep responses helpful and focused on the policy editing task.`;
 
-    const messages: UIMessage[] = [
-      ...(body.chatHistory || []).map((msg) => ({
-        id: crypto.randomUUID(),
-        role: msg.role,
-        content: msg.content,
-        parts: [{ type: 'text' as const, text: msg.content }],
-      })),
-      {
-        id: crypto.randomUUID(),
-        role: 'user' as const,
-        content: body.instructions,
-        parts: [{ type: 'text' as const, text: body.instructions }],
-      },
+    if (!body.instructions) {
+      throw new HttpException(
+        'instructions field is required',
+        HttpStatus.BAD_REQUEST,
+      );
+    }
+
+    const groqMessages = [
+      { role: 'system', content: systemPrompt },
+      ...(body.chatHistory || [])
+        .filter((msg) => msg.role && msg.content)
+        .map((msg) => ({
+          role: msg.role,
+          content: msg.content,
+        })),
+      { role: 'user', content: body.instructions },
     ];
 
-    const result = streamText({
-      model: openai('gpt-5.5'),
-      system: systemPrompt,
-      messages: await convertToModelMessages(messages),
-    });
+    const groqApiKey = process.env.GROQ_API_KEY || process.env.OPENAI_API_KEY;
+    const groqResponse = await fetch(
+      'https://api.groq.com/openai/v1/chat/completions',
+      {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${groqApiKey}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          model: 'llama-3.1-8b-instant',
+          messages: groqMessages,
+          stream: true,
+        }),
+      },
+    );
 
-    return result.pipeTextStreamToResponse(res);
+    if (!groqResponse.ok) {
+      const errBody = await groqResponse.text();
+      throw new HttpException(
+        `AI service error: ${errBody}`,
+        HttpStatus.SERVICE_UNAVAILABLE,
+      );
+    }
+
+    if (!groqResponse.body) {
+      throw new HttpException(
+        'AI service returned empty response',
+        HttpStatus.SERVICE_UNAVAILABLE,
+      );
+    }
+
+    res.setHeader('Content-Type', 'text/event-stream');
+    res.setHeader('Cache-Control', 'no-cache');
+    res.setHeader('Connection', 'keep-alive');
+
+    const reader = groqResponse.body.getReader();
+    const decoder = new TextDecoder();
+
+    try {
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+
+        const chunk = decoder.decode(value, { stream: true });
+        const lines = chunk.split('\n').filter((l) => l.startsWith('data: '));
+
+        for (const line of lines) {
+          const data = line.slice(6).trim();
+          if (data === '[DONE]') continue;
+          try {
+            const parsed = JSON.parse(data);
+            const content = parsed.choices?.[0]?.delta?.content || '';
+            if (content) {
+              res.write(content);
+            }
+          } catch {
+            // skip malformed chunks
+          }
+        }
+      }
+    } finally {
+      reader.releaseLock();
+      res.end();
+    }
   }
 
   private convertPolicyContentToText(content: unknown): string {

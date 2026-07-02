@@ -5,15 +5,16 @@
     "typescript": "^5.8.3"
   },
   "exports": {
-    ".": "./src/index.ts",
-    "./devices": "./src/devices.ts",
-    "./envs": "./src/envs.ts",
-    "./format": "./src/format.ts"
+    ".": "./dist/index.js",
+    "./devices": "./dist/devices.js",
+    "./envs": "./dist/envs.js",
+    "./format": "./dist/format.js"
   },
-  "main": "src/index.ts",
+  "main": "dist/index.js",
   "private": true,
   "scripts": {
-    "clean": "rm -rf .turbo node_modules",
+    "build": "tsc",
+    "clean": "rm -rf .turbo node_modules dist",
     "format": "prettier --write .",
     "lint": "prettier --check .",
     "typecheck": "tsc --noEmit"

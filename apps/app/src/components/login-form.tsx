@@ -4,6 +4,7 @@ import { GithubSignIn } from '@/components/github-sign-in';
 import { GoogleSignIn } from '@/components/google-sign-in';
 import { MagicLinkSignIn } from '@/components/magic-link';
 import { MicrosoftSignIn } from '@/components/microsoft-sign-in';
+import { PasswordSignIn } from '@/components/password-sign-in';
 import { Button } from '@trycompai/ui/button';
 import { Card, CardContent, CardDescription, CardTitle } from '@trycompai/ui/card';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@trycompai/ui/collapsible';
@@ -58,24 +59,19 @@ export function LoginForm({
   const preferredSignInOption = showGoogle ? (
     <GoogleSignIn inviteCode={inviteCode} redirectTo={redirectTo} />
   ) : (
+    <PasswordSignIn inviteCode={inviteCode} redirectTo={redirectTo} />
+  );
+
+  const moreOptionsList = [
     <MagicLinkSignIn
-      key="preferred-magic"
+      key="secondary-magic"
       inviteCode={inviteCode}
       redirectTo={redirectTo}
       onMagicLinkSubmit={handleMagicLinkSent}
-    />
-  );
-
-  const moreOptionsList = [];
+    />,
+  ];
   if (showGoogle) {
-    moreOptionsList.push(
-      <MagicLinkSignIn
-        key="secondary-magic"
-        inviteCode={inviteCode}
-        redirectTo={redirectTo}
-        onMagicLinkSubmit={handleMagicLinkSent}
-      />,
-    );
+    moreOptionsList.unshift(); // google already primary
   }
   if (showMicrosoft) {
     moreOptionsList.push(
